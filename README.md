@@ -68,6 +68,14 @@ npm install
 
 ---
 
+## 🎨 Tema (visual)
+
+- O projeto agora aplica um **tema escuro por padrão** com tons de roxo e preto para melhor foco e legibilidade em ambientes com pouca luz.
+- As cores principais são parametrizadas em `src/index.css` (tokens CSS) e o tema é aplicado globalmente via `class="dark"` em `index.html`.
+- Para desativar o tema escuro, remova `class="dark"` do `<html>` em `index.html` ou adicione um toggle de tema controlado por estado.
+
+---
+
 ## 🗂 Estrutura do projeto (resumida)
 
 - `src/components/` — componentes da UI (upload, tabela, botões)

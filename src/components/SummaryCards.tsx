@@ -55,7 +55,7 @@ export function SummaryCards({ data }: SummaryCardsProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: index * 0.1 }}
-          className="p-5 rounded-xl bg-card border border-border shadow-soft hover:shadow-elevated transition-shadow"
+          className={`p-5 rounded-xl bg-card border border-border shadow-soft hover:shadow-elevated transition-shadow ${card.color === 'primary' ? 'border-l-4 border-primary/60' : ''}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">

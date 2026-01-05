@@ -41,7 +41,7 @@ export function DuplicateDialog({ open, duplicates, onConfirm, onCancel }: Dupli
             )}
           </AlertDialogDescription>
           {duplicates.length > 1 && (
-            <div className="mt-2 max-h-32 overflow-y-auto rounded-md border bg-muted/50 p-2">
+            <div className="mt-2 max-h-32 overflow-y-auto rounded-md border border-border bg-card p-2 shadow-soft">
               <ul className="text-sm text-muted-foreground space-y-1">
                 {duplicates.slice(0, 10).map((nota, idx) => (
                   <li key={idx} className="flex justify-between">

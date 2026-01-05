@@ -129,7 +129,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
           border-2 border-dashed rounded-xl cursor-pointer
           transition-all duration-300 ease-out
           ${isDragging 
-            ? 'border-primary bg-primary/5 scale-[1.02]' 
+            ? 'border-primary bg-primary/6 scale-[1.02] shadow-glow' 
             : 'border-border bg-card hover:border-primary/50 hover:bg-muted/50'
           }
           ${isProcessing ? 'pointer-events-none' : ''}
@@ -182,7 +182,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
             >
               <div className={`
                 p-4 rounded-full transition-colors duration-300
-                ${isDragging ? 'bg-primary/10' : 'bg-muted'}
+                ${isDragging ? 'bg-primary/10 shadow-glow' : 'bg-muted/20'}
               `}>
                 {isDragging ? (
                   <FileText className="w-10 h-10 text-primary" />
@@ -200,7 +200,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 px-4 py-2 mt-2 rounded-lg bg-muted">
+              <div className="flex items-center gap-2 px-4 py-2 mt-2 rounded-lg bg-muted/20 border border-border">
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">
                   NF-e • CT-e • Múltiplos arquivos

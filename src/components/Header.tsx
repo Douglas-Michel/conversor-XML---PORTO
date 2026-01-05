@@ -9,7 +9,7 @@ export function Header() {
       transition={{ duration: 0.5 }}
       className="flex items-center gap-3 mb-8"
     >
-      <div className="p-2.5 rounded-xl gradient-primary shadow-glow">
+      <div className="p-2.5 rounded-xl gradient-primary shadow-glow border border-border">
         <FileSpreadsheet className="w-7 h-7 text-primary-foreground" />
       </div>
       <div>

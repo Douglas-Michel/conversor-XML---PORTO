@@ -1,73 +1,103 @@
-# Welcome to your Lovable project
+# Conversor XML para Excel ⚡️
 
-## Project info
+**Projeto:** Vite + React + TypeScript
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Um aplicativo leve para importar arquivos XML, visualizar os dados em tabela, detectar/remover duplicatas e exportar para Excel (`.xlsx`). Ideal para transformar relatórios XML em planilhas editáveis. 🔧
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Recursos principais
 
-**Use Lovable**
+- Upload de arquivos XML via *drag & drop* ou seletor de arquivos
+- Parser de XML para JSON (extração de campos relevantes)
+- Visualização em tabela com detecção de duplicatas
+- Exportação para Excel (`.xlsx`) usando a biblioteca `xlsx`
+- UI responsiva com componentes reutilizáveis
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+## 🧭 Tecnologias
 
 - Vite
-- TypeScript
 - React
-- shadcn-ui
+- TypeScript
 - Tailwind CSS
+- XLSX (exportação para Excel)
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 🔧 Requisitos
 
-## Can I connect a custom domain to my Lovable project?
+- Node.js (versão LTS recomendada)
+- npm (ou pnpm/yarn)
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📦 Instalação
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+# clonar o repositório
+git clone <URL-do-repositório>
+cd "conversor XML"
+
+# instalar dependências
+npm install
+```
+
+---
+
+## ▶️ Scripts úteis
+
+- `npm run dev` — Inicia o servidor de desenvolvimento (Vite)
+- `npm run build` — Gera a build de produção
+- `npm run build:dev` — Build em modo development
+- `npm run preview` — Pré-visualiza a build gerada
+- `npm run lint` — Executa o ESLint
+
+---
+
+## ✅ Como usar
+
+1. Execute `npm run dev`.
+2. Abra o navegador em `http://localhost:5173`.
+3. Faça upload do arquivo XML (arrastar ou clicar no seletor).
+4. Revise os dados na tabela, remova duplicatas se necessário.
+5. Clique em **Exportar** para gerar o arquivo `.xlsx`.
+
+> Dica: a interface contém botões para localizar e resolver duplicatas antes da exportação.
+
+---
+
+## 🗂 Estrutura do projeto (resumida)
+
+- `src/components/` — componentes da UI (upload, tabela, botões)
+- `src/lib/` — utilitários (parser XML, exportação para Excel)
+- `src/pages/` — páginas (Index, NotFound)
+- `public/` — arquivos estáticos
+
+---
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Você pode:
+
+1. Abrir uma issue descrevendo o problema ou a feature.
+2. Criar um *fork* e enviar um pull request com as mudanças.
+
+Por favor siga as regras de estilo de código do projeto e adicione testes/descrições quando relevante.
+
+---
+
+## 📝 Licença
+
+Sem licença especificada neste repositório. Se desejar, adicione um arquivo `LICENSE` (por exemplo, MIT) para tornar a licença explícita.
+
+---
+
+## ✉️ Contato
+
+Se precisar de ajuda, abra uma issue ou deixe uma mensagem no repositório.
+
+---
+
+**Bom trabalho!** Se quiser, eu posso também: adicionar um arquivo `LICENSE`, ajustar o texto para um README mais curto, ou incluir instruções para Docker/CI/CD. 🚀

@@ -1,8 +1,14 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { parseNFeXML, NotaFiscal } from '@/lib/xmlParser';
 import { DuplicateDialog } from './DuplicateDialog';
+import { ErrorDialog } from './ErrorDialog';
+
+interface FileError {
+  fileName: string;
+  reason: string;
+}
 
 interface FileUploadZoneProps {
   onFilesProcessed: (notas: NotaFiscal[]) => void;
@@ -17,6 +23,8 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
   const [pendingNotas, setPendingNotas] = useState<NotaFiscal[]>([]);
   const [duplicates, setDuplicates] = useState<NotaFiscal[]>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [fileErrors, setFileErrors] = useState<FileError[]>([]);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   // Lê conteúdo de arquivo com detecção de encoding e fallback (UTF-16, ISO-8859-1). Retorna string vazia se não decodificável.
   async function readFileContent(file: File): Promise<string> {
@@ -54,6 +62,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
   const processFiles = useCallback(async (files: FileList | File[]) => {
     setIsProcessing(true);
     setProcessedCount({ success: 0, failed: 0 });
+    const errors: FileError[] = [];
 
     const xmlFiles = Array.from(files).filter(
       file => file.name.toLowerCase().endsWith('.xml')
@@ -73,7 +82,22 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
         const content = await readFileContent(file as File);
 
         if (!content || !content.trim()) {
-          console.warn(`Conteúdo vazio/impossível de decodificar: ${file.name}`);
+          errors.push({
+            fileName: file.name,
+            reason: 'Arquivo vazio ou não conseguiu ser decodificado em nenhum formato'
+          });
+          failed++;
+          setProcessedCount({ success, failed });
+          continue;
+        }
+
+        // Ignora arquivos de evento (procEventoNFe/CTe) que não contêm a nota autorizada
+        const isEventXml = /<\s*procEventoNFe|<\s*procEventoCTe|<\s*eventoNFe|<\s*eventoCTe/i.test(content);
+        if (isEventXml) {
+          errors.push({
+            fileName: file.name,
+            reason: 'Arquivo de evento (não é a nota fiscal autorizada) - envie o XML da nota com protocolo'
+          });
           failed++;
           setProcessedCount({ success, failed });
           continue;
@@ -86,14 +110,26 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
           notas.push(nota);
           success++;
         } else {
-          console.warn(`Falha ao processar/ignorar XML: ${file.name} — início do arquivo: ${content ? content.substring(0, 200).replace(/\s+/g, ' ').trim() : '[conteúdo vazio]'}`);
+          errors.push({
+            fileName: file.name,
+            reason: 'XML corrompido ou em formato não suportado - não conseguiu extrair dados da nota'
+          });
           failed++;
         }
       } catch (error) {
-        console.error(`Error processing ${file.name}:`, error);
+        errors.push({
+          fileName: file.name,
+          reason: `Erro ao processar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+        });
         failed++;
       }
       setProcessedCount({ success, failed });
+    }
+
+    // Se houve erros, mostra o modal de erros
+    if (errors.length > 0) {
+      setFileErrors(errors);
+      setShowErrorDialog(true);
     }
 
     // Check for duplicates based on chaveAcesso
@@ -260,6 +296,15 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
         duplicates={duplicates}
         onConfirm={handleConfirmDuplicates}
         onCancel={handleCancelDuplicates}
+      />
+
+      <ErrorDialog
+        open={showErrorDialog}
+        errors={fileErrors}
+        onClose={() => {
+          setShowErrorDialog(false);
+          setFileErrors([]);
+        }}
       />
     </motion.div>
   );

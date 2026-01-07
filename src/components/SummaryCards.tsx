@@ -12,43 +12,60 @@ export function SummaryCards({ data }: SummaryCardsProps) {
   const entradas = data.filter(n => n.tipoOperacao === 'Entrada');
   const saidas = data.filter(n => n.tipoOperacao === 'Saída');
   
-  const totalEntradas = entradas.reduce((sum, n) => sum + n.valorTotal, 0);
-  const totalSaidas = saidas.reduce((sum, n) => sum + n.valorTotal, 0);
+  const totalDocumentos = data.length;
+  const totalValor = data.reduce((sum, n) => sum + n.valorTotal, 0);
+  const totalPIS = data.reduce((sum, n) => sum + n.valorPIS, 0);
+  const totalCOFINS = data.reduce((sum, n) => sum + n.valorCOFINS, 0);
+  const totalIPI = data.reduce((sum, n) => sum + n.valorIPI, 0);
   const totalICMS = data.reduce((sum, n) => sum + n.valorICMS, 0);
 
   const cards = [
     {
       title: 'Total Documentos',
-      value: data.length.toString(),
+      value: totalDocumentos.toString(),
       subtitle: `${data.filter(n => n.tipo === 'NF-e').length} NF-e • ${data.filter(n => n.tipo === 'CT-e').length} CT-e`,
       icon: FileText,
       color: 'primary',
     },
     {
-      title: 'Entradas',
-      value: formatCurrency(totalEntradas),
-      subtitle: `${entradas.length} documento${entradas.length !== 1 ? 's' : ''}`,
-      icon: ArrowDownCircle,
+      title: 'Valor Total',
+      value: formatCurrency(totalValor),
+      subtitle: 'Soma de todos os documentos',
+      icon: Calculator,
       color: 'success',
     },
     {
-      title: 'Saídas',
-      value: formatCurrency(totalSaidas),
-      subtitle: `${saidas.length} documento${saidas.length !== 1 ? 's' : ''}`,
-      icon: ArrowUpCircle,
+      title: 'Total PIS',
+      value: formatCurrency(totalPIS),
+      subtitle: 'Soma de todos os documentos',
+      icon: Calculator,
       color: 'accent',
+    },
+    {
+      title: 'Total COFINS',
+      value: formatCurrency(totalCOFINS),
+      subtitle: 'Soma de todos os documentos',
+      icon: Calculator,
+      color: 'muted',
+    },
+    {
+      title: 'Total IPI',
+      value: formatCurrency(totalIPI),
+      subtitle: 'Soma de todos os documentos',
+      icon: Calculator,
+      color: 'muted',
     },
     {
       title: 'Total ICMS',
       value: formatCurrency(totalICMS),
       subtitle: 'Soma de todos os documentos',
       icon: Calculator,
-      color: 'muted',
+      color: 'accent',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {cards.map((card, index) => (
         <motion.div
           key={card.title}

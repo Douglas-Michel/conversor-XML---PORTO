@@ -1,32 +1,68 @@
-# Conversor XML para Excel ⚡️
+# Conversor XML → Excel | NF-e e CT-e ⚡️
 
-**Projeto:** Vite + React + TypeScript
+🚀 **Aplicação web completa** para conversão automática de arquivos XML fiscais (NF-e e CT-e) para planilhas Excel.
 
-Um aplicativo leve para importar arquivos XML, visualizar os dados em tabela, detectar/remover duplicatas e exportar para Excel (`.xlsx`). Ideal para transformar relatórios XML em planilhas editáveis. 🔧
+**Stack:** Vite + React + TypeScript + Tailwind CSS
 
 ---
 
-## 🚀 Recursos principais
+## ✨ Características Principais
 
-- Upload de arquivos XML via *drag & drop* ou seletor de arquivos
-- Parser de XML para JSON (extração de campos relevantes)
-- Visualização em tabela com detecção de duplicatas
-- Exportação para Excel (`.xlsx`) usando a biblioteca `xlsx`
-- UI responsiva com componentes reutilizáveis
+- 🌐 **100% Web** - Roda no navegador, sem instalação necessária
+- 🔒 **Privacidade Total** - Processamento local, seus dados nunca saem do computador
+- ⚡ **Alta Performance** - Processamento instantâneo de múltiplos arquivos
+- 📊 **Extração Completa** - Todos os tributos (PIS, COFINS, IPI, ICMS, DIFAL)
+- 🎯 **Validação Automática** - Verifica consistência dos cálculos fiscais
+- 📱 **Responsivo** - Funciona perfeitamente em desktop, tablet e mobile
+- 🔄 **Detecção de Duplicatas** - Identifica notas já importadas
+- 📥 **Drag & Drop** - Interface intuitiva para upload de arquivos
+- 📤 **Exportação Excel** - Planilhas formatadas e prontas para uso
+
+---
+
+## 🌐 Deploy para Web
+
+### ⚡ Opção 1: Vercel (Mais Rápido)
+```bash
+npm install -g vercel
+vercel
+```
+**URL:** `https://seu-projeto.vercel.app` (grátis)
+
+### 🎯 Opção 2: Netlify (Mais Fácil)
+```bash
+npm run build
+# Arraste a pasta "dist" para netlify.com/drop
+```
+**URL:** `https://seu-projeto.netlify.app` (grátis)
+
+### 📦 Opção 3: GitHub Pages (Gratuito)
+- Push para GitHub
+- Settings → Pages → GitHub Actions
+**URL:** `https://seu-usuario.github.io/conversor-xml`
+
+**📖 Guia completo de deploy:** Veja [DEPLOY.md](DEPLOY.md)
+
+**🚀 Scripts rápidos:**
+- Windows: `deploy.bat vercel` ou `deploy.bat netlify`
+- Linux/Mac: `./deploy.sh vercel` ou `./deploy.sh netlify`
 
 ---
 
 ## 🧭 Tecnologias
 
-- Vite
-- React
-- TypeScript
-- Tailwind CSS
-- XLSX (exportação para Excel)
+- **Framework:** Vite + React 18
+- **Linguagem:** TypeScript
+- **Estilização:** Tailwind CSS + Radix UI
+- **Processamento:** DOMParser (nativo), XLSX.js
+- **Animações:** Framer Motion
+- **Formulários:** React Hook Form + Zod
 
 ---
 
-## 🔧 Requisitos
+## 🔧 Desenvolvimento Local
+
+### Requisitos
 
 - Node.js (versão LTS recomendada)
 - npm (ou pnpm/yarn)

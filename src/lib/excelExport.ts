@@ -32,11 +32,11 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
   const data = normalizedNotas.map((nota) => ({
     'Data Emissão': nota.dataEmissao || today,
     'Data Inserção': nota.dataInsercao || today,
-    'Situação': nota.situacao || 'Desconhecida',
+    'Situação': (nota.situacao || 'Desconhecida').toUpperCase(),
     'Data Mudança': nota.dataMudancaSituacao || '',
-    'Tipo NF': nota.tipoOperacao,
-    'Fornecedor/Cliente': nota.fornecedorCliente,
-    'Material': nota.material,
+    'Tipo NF': nota.tipoOperacao?.toUpperCase() || '',
+    'Fornecedor/Cliente': nota.fornecedorCliente?.toUpperCase() || '',
+    'Material': nota.material?.toUpperCase() || '',
     'Nº NF-e': nota.tipo === 'NF-e' ? nota.numero : '',
     'Nº CT-e': nota.numeroCTe || nota.nfeReferenciada || '',
     'Valor': nota.valorTotal,
@@ -171,32 +171,32 @@ function createReconciliation(notas: NotaFiscal[]) {
     const ipiDiff = (n.valorIPI || 0) - (n.expectedIPI || 0);
     const icmsDiff = (n.valorICMS || 0) - (n.expectedICMS || 0);
 
-    const pisReason = n.expectedPIS && n.expectedPIS !== 0 ? (Math.abs(pisDiff) <= 0.1 ? 'Arredondamento' : (n.expectedPIS === sumDetValuesSafe(n, 'vPIS') ? 'Soma por item' : (n.declaredPIS ? 'Alíquota declarada sobre base' : 'Percentual sobre total'))) : 'Sem dados';
-    const cofReason = n.expectedCOFINS && n.expectedCOFINS !== 0 ? (Math.abs(cofDiff) <= 0.1 ? 'Arredondamento' : (n.expectedCOFINS === sumDetValuesSafe(n, 'vCOFINS') ? 'Soma por item' : (n.declaredCOFINS ? 'Alíquota declarada sobre base' : 'Percentual sobre total'))) : 'Sem dados';
-    const ipiReason = Math.abs(ipiDiff) <= 0.1 ? 'OK/Arredondamento' : 'Diferença';
-    const icmsReason = Math.abs(icmsDiff) <= 0.1 ? 'OK/Arredondamento' : 'Diferença';
+    const pisReason = n.expectedPIS && n.expectedPIS !== 0 ? (Math.abs(pisDiff) <= 0.1 ? 'ARREDONDAMENTO' : (n.expectedPIS === sumDetValuesSafe(n, 'vPIS') ? 'SOMA POR ITEM' : (n.declaredPIS ? 'ALÍQUOTA DECLARADA SOBRE BASE' : 'PERCENTUAL SOBRE TOTAL'))) : 'SEM DADOS';
+    const cofReason = n.expectedCOFINS && n.expectedCOFINS !== 0 ? (Math.abs(cofDiff) <= 0.1 ? 'ARREDONDAMENTO' : (n.expectedCOFINS === sumDetValuesSafe(n, 'vCOFINS') ? 'SOMA POR ITEM' : (n.declaredCOFINS ? 'ALÍQUOTA DECLARADA SOBRE BASE' : 'PERCENTUAL SOBRE TOTAL'))) : 'SEM DADOS';
+    const ipiReason = Math.abs(ipiDiff) <= 0.1 ? 'OK/ARREDONDAMENTO' : 'DIFERENÇA';
+    const icmsReason = Math.abs(icmsDiff) <= 0.1 ? 'OK/ARREDONDAMENTO' : 'DIFERENÇA';
 
     return {
       'Chave': n.chaveAcesso,
       'Nº NF': n.numero,
-      'Fornecedor': n.fornecedorCliente,
+      'Fornecedor': n.fornecedorCliente?.toUpperCase() || '',
       'Valor': n.valorTotal,
       'PIS Atual': n.valorPIS,
       'PIS Esperado': n.expectedPIS || 0,
       'PIS Dif': pisDiff,
-      'PIS Motivo': pisReason,
+      'PIS Motivo': pisReason.toUpperCase(),
       'COFINS Atual': n.valorCOFINS,
       'COFINS Esperado': n.expectedCOFINS || 0,
       'COFINS Dif': cofDiff,
-      'COFINS Motivo': cofReason,
+      'COFINS Motivo': cofReason.toUpperCase(),
       'IPI Atual': n.valorIPI,
       'IPI Esperado': n.expectedIPI || 0,
       'IPI Dif': ipiDiff,
-      'IPI Motivo': ipiReason,
+      'IPI Motivo': ipiReason.toUpperCase(),
       'ICMS Atual': n.valorICMS,
       'ICMS Esperado': n.expectedICMS || 0,
       'ICMS Dif': icmsDiff,
-      'ICMS Motivo': icmsReason,
+      'ICMS Motivo': icmsReason.toUpperCase(),
     };
   });
 }

@@ -829,11 +829,11 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   const valorICMS = getNumericContent(icmsTot, 'vICMS');
   const aliquotaICMS = baseICMS > 0 ? (valorICMS / baseICMS) * 100 : 0;
 
-  // Valores totais - Usa apenas ICMSTot
-  const valorTotal = getNumericContent(icmsTot, 'vNF') 
-    || getNumericContent(icmsTot, 'vProd') 
-    || getNumericContent(doc, 'vNF') 
-    || getNumericContent(doc, 'vProd');
+  // Valores totais - Usa vProd (valor dos produtos) ao invés de vNF (valor total da nota)
+  const valorTotal = getNumericContent(icmsTot, 'vProd') 
+    || getNumericContent(doc, 'vProd')
+    || getNumericContent(icmsTot, 'vNF') 
+    || getNumericContent(doc, 'vNF');
     
   // Tributos - Usa valores declarados no totalizador
   const valorPIS = getNumericContent(icmsTot, 'vPIS') || 0;

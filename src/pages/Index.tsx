@@ -25,7 +25,12 @@ const Index = () => {
           // Aplica cancelamento na nota existente (se encontrada)
           const idx = updated.findIndex(p => p.chaveAcesso === n.chaveAcesso);
           if (idx !== -1) {
-            updated[idx] = { ...updated[idx], situacao: 'Cancelada', situacaoInfo: n.situacaoInfo };
+            updated[idx] = { 
+              ...updated[idx], 
+              situacao: 'Cancelada', 
+              situacaoInfo: n.situacaoInfo,
+              dataMudancaSituacao: n.dataMudancaSituacao 
+            };
           } else {
             // Se não existe nota correspondente, adiciona o arquivo de cancelamento como registro visível
             toAdd.push(n);

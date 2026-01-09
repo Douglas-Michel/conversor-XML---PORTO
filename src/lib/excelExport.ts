@@ -33,6 +33,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     'Data Emissão': nota.dataEmissao || today,
     'Data Inserção': nota.dataInsercao || today,
     'Situação': nota.situacao || 'Desconhecida',
+    'Data Mudança': nota.dataMudancaSituacao || '',
     'Tipo NF': nota.tipoOperacao,
     'Fornecedor/Cliente': nota.fornecedorCliente,
     'Material': nota.material,
@@ -95,6 +96,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     { wch: 12 },  // Data Emissão
     { wch: 12 },  // Data Inserção
     { wch: 14 },  // Situação
+    { wch: 12 },  // Data Mudança
     { wch: 10 },  // Tipo NF (Entrada/Saída)
     { wch: 40 },  // Fornecedor/Cliente
     { wch: 40 },  // Material

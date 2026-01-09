@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, CheckCircle2, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { parseNFeXML, NotaFiscal } from '@/lib/xmlParser';
 import { DuplicateDialog } from './DuplicateDialog';
 import { ErrorDialog } from './ErrorDialog';
@@ -26,35 +26,34 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
   const [fileErrors, setFileErrors] = useState<FileError[]>([]);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
 
-  // Lê conteúdo de arquivo com detecção de encoding e fallback (UTF-16, ISO-8859-1). Retorna string vazia se não decodificável.
+  // Lê conteúdo de arquivo com detecção de encoding e fallback
   async function readFileContent(file: File): Promise<string> {
     try {
-      let txt = await file.text();
-      if (txt && txt.trim()) return txt;
+      const txt = await file.text();
+      if (txt?.trim()) return txt;
 
       const ab = await file.arrayBuffer();
       const bytes = new Uint8Array(ab);
 
       // Detecta arquivos zip (PK signature) e pula
       if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
-        console.warn(`Arquivo possivelmente compactado (zip) pulado: ${file.name}`);
+        console.warn(`Arquivo zip ignorado: ${file.name}`);
         return '';
       }
 
+      // Detecta encoding e decodifica
       let decoder: TextDecoder;
-      if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) decoder = new TextDecoder('utf-16le');
-      else if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) decoder = new TextDecoder('utf-16be');
-      else decoder = new TextDecoder('iso-8859-1'); // fallback
-
-      const decoded = decoder.decode(ab);
-      if (decoded && decoded.trim()) {
-        console.warn(`Arquivo ${file.name} decodificado com fallback`);
-        return decoded;
+      if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        decoder = new TextDecoder('utf-16le');
+      } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+        decoder = new TextDecoder('utf-16be');
+      } else {
+        decoder = new TextDecoder('iso-8859-1');
       }
 
-      return '';
+      return decoder.decode(ab).trim();
     } catch (e) {
-      console.error(`Erro lendo arquivo ${file.name}:`, e);
+      console.error(`Erro lendo ${file.name}:`, e);
       return '';
     }
   }
@@ -64,10 +63,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
     setProcessedCount({ success: 0, failed: 0 });
     const errors: FileError[] = [];
 
-    const xmlFiles = Array.from(files).filter(
-      file => file.name.toLowerCase().endsWith('.xml')
-    );
-
+    const xmlFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.xml'));
     if (xmlFiles.length === 0) {
       setIsProcessing(false);
       return;
@@ -81,23 +77,16 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
       try {
         const content = await readFileContent(file as File);
 
-        if (!content || !content.trim()) {
-          errors.push({
-            fileName: file.name,
-            reason: 'Arquivo vazio ou não conseguiu ser decodificado em nenhum formato'
-          });
+        if (!content) {
+          errors.push({ fileName: file.name, reason: 'Arquivo vazio ou não decodificável' });
           failed++;
           setProcessedCount({ success, failed });
           continue;
         }
 
-        // Ignora arquivos de evento (procEventoNFe/CTe) que não contêm a nota autorizada
-        const isEventXml = /<\s*procEventoNFe|<\s*procEventoCTe|<\s*eventoNFe|<\s*eventoCTe/i.test(content);
-        if (isEventXml) {
-          errors.push({
-            fileName: file.name,
-            reason: 'Arquivo de evento (não é a nota fiscal autorizada) - envie o XML da nota com protocolo'
-          });
+        // Ignora arquivos de evento
+        if (/<\s*procEvento(NFe|CTe)|<\s*evento(NFe|CTe)/i.test(content)) {
+          errors.push({ fileName: file.name, reason: 'Arquivo de evento (não é nota autorizada)' });
           failed++;
           setProcessedCount({ success, failed });
           continue;
@@ -105,34 +94,29 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
 
         const nota = parseNFeXML(content, file.name);
         if (nota) {
-          // Marca data de inserção (data do processamento/importação)
           nota.dataInsercao = new Date().toLocaleDateString('pt-BR');
           notas.push(nota);
           success++;
         } else {
-          errors.push({
-            fileName: file.name,
-            reason: 'XML corrompido ou em formato não suportado - não conseguiu extrair dados da nota'
-          });
+          errors.push({ fileName: file.name, reason: 'XML corrompido ou formato não suportado' });
           failed++;
         }
       } catch (error) {
         errors.push({
           fileName: file.name,
-          reason: `Erro ao processar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+          reason: error instanceof Error ? error.message : 'Erro desconhecido'
         });
         failed++;
       }
       setProcessedCount({ success, failed });
     }
 
-    // Se houve erros, mostra o modal de erros
     if (errors.length > 0) {
       setFileErrors(errors);
       setShowErrorDialog(true);
     }
 
-    // Check for duplicates based on chaveAcesso
+    // Verifica duplicatas
     const existingKeys = new Set(existingNotas.map(n => n.chaveAcesso));
     const duplicateNotas = notas.filter(n => existingKeys.has(n.chaveAcesso));
     const uniqueNotas = notas.filter(n => !existingKeys.has(n.chaveAcesso));
@@ -141,11 +125,11 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
       setPendingNotas(uniqueNotas);
       setDuplicates(duplicateNotas);
       setShowDuplicateDialog(true);
-      setIsProcessing(false);
     } else {
       onFilesProcessed(notas);
-      setIsProcessing(false);
     }
+    
+    setIsProcessing(false);
   }, [onFilesProcessed, setIsProcessing, existingNotas]);
 
   const handleConfirmDuplicates = () => {
@@ -283,7 +267,7 @@ export function FileUploadZone({ onFilesProcessed, isProcessing, setIsProcessing
               <div className="flex items-center gap-2 px-4 py-2 mt-2 rounded-lg bg-muted/20 border border-border">
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">
-                  NF-e • CT-e • Múltiplos arquivos
+                  XML • NF-e • CT-e • Múltiplos
                 </span>
               </div>
             </motion.div>

@@ -29,13 +29,14 @@ export function DataTable({ data }: DataTableProps) {
       className="rounded-xl border border-border bg-card shadow-soft overflow-hidden"
     >
       <ScrollArea className="w-full">
-        <div className="min-w-[2200px]">
+        <div className="min-w-[2300px]">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Data Emissão</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Data Inserção</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Situação</TableHead>
+                <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Data Mudança</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Tipo NF</TableHead> 
                 <TableHead className="font-semibold text-foreground whitespace-nowrap">Fornecedor/Cliente</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap">Material</TableHead>
@@ -92,9 +93,12 @@ export function DataTable({ data }: DataTableProps) {
                       </TooltipContent>
                     </Tooltip>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground text-center whitespace-nowrap">
+                    {nota.dataMudancaSituacao || '—'}
+                  </TableCell>
                   <TableCell className="text-center">
                     <Badge 
-                      variant={nota.tipoOperacao === 'Entrada' ? 'outline' : 'destructive'}
+                      variant={nota.tipoOperacao === 'Entrada' ? 'blue' : 'destructive'}
                       className="text-xs whitespace-nowrap"
                     >
                       {nota.tipoOperacao}
@@ -207,8 +211,8 @@ export function DataTable({ data }: DataTableProps) {
                   <TableCell className="text-right tabular-nums text-muted-foreground whitespace-nowrap">
                     {formatCurrency(nota.valorDIFAL)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {formatPercent(nota.reducaoICMS)}
+                  <TableCell className="text-center">
+                    {nota.reducaoICMS > 0 ? 'Sim' : 'Não'}
                   </TableCell>
                 </motion.tr>
               ))}

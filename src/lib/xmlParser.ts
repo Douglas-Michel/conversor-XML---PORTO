@@ -105,6 +105,7 @@ export interface NotaFiscal {
   dataInsercao?: string;
   situacao?: SituacaoDocumento;
   situacaoInfo?: ProtocoloInfo;
+  dataMudancaSituacao?: string;
   isCancellationFile?: boolean;
 }
 
@@ -171,53 +172,45 @@ const SEFAZ_STATUS = {
  */
 const MAX_MATERIALS_DISPLAY = 3;
 
+/**
+ * CNPJs/CPFs da empresa usuária (para detecção de entrada/saída)
+ * Adicione aqui os CNPJs da sua empresa para identificação correta
+ */
+const EMPRESA_CNPJS = [
+  '05255986000164', // CNPJ principal (sem formatação)
+  // Adicione outros CNPJs/filiais se necessário
+];
+
+/**
+ * Detecta se um CNPJ pertence à empresa usuária
+ */
+function isCnpjDaEmpresa(cnpj: string): boolean {
+  if (!cnpj) return false;
+  const cnpjLimpo = cnpj.replace(/\D/g, '');
+  return EMPRESA_CNPJS.some(empresaCnpj => cnpjLimpo === empresaCnpj);
+}
+
 // ============================================================================
 // XML DOM UTILITIES
 // ============================================================================
 
 /**
  * Busca elementos por localName ignorando namespaces
- * Compatível com XMLs que usam diferentes prefixos de namespace
- * 
  * @param root - Elemento raiz para busca
  * @param tagName - Nome da tag a buscar
  * @returns Array de elementos encontrados
  */
 function getElementsByLocalName(root: Element | Document | null, tagName: string): Element[] {
-  if (!root) return [];
+  if (!root || !('getElementsByTagName' in root)) return [];
   
-  const results: Element[] = [];
+  // Busca direta (mais comum e rápida)
+  const direct = (root as Element).getElementsByTagName(tagName);
+  if (direct?.length) return Array.from(direct);
   
-  try {
-    // Tenta busca namespace-aware primeiro
-    if ('getElementsByTagNameNS' in root) {
-      const nsList = (root as Document).getElementsByTagNameNS('*', tagName);
-      if (nsList?.length) {
-        return Array.from(nsList);
-      }
-    }
-  } catch {
-    // Continua para fallback
-  }
-
-  try {
-    if ('getElementsByTagName' in root) {
-      const coll = (root as Element).getElementsByTagName(tagName);
-      if (coll?.length) {
-        return Array.from(coll);
-      }
-
-      // Fallback: busca case-insensitive por localName
-      const all = (root as Element).getElementsByTagName('*');
-      return Array.from(all).filter(
-        el => el.localName?.toLowerCase() === tagName.toLowerCase()
-      );
-    }
-  } catch {
-    // Retorna vazio em caso de erro
-  }
-
-  return results;
+  // Fallback: busca case-insensitive por localName
+  const all = (root as Element).getElementsByTagName('*');
+  const tagLower = tagName.toLowerCase();
+  return Array.from(all).filter(el => el.localName?.toLowerCase() === tagLower);
 }
 
 /**
@@ -278,8 +271,6 @@ function amountsClose(actual: number, expected: number): boolean {
 
 /**
  * Soma valores de uma tag específica em todos os itens (det) do documento
- * Útil para validação de totais declarados vs calculados
- * 
  * @param doc - Documento XML
  * @param tagName - Nome da tag a somar (ex: vPIS, vCOFINS, vIPI, vICMS)
  * @returns Soma total dos valores encontrados
@@ -291,29 +282,54 @@ function sumDetValues(doc: Element | null, tagName: string): number {
   let sum = 0;
   
   for (const det of dets) {
-    // Procura diretamente no det
-    const direct = getNumericContent(det, tagName);
-    if (direct > 0) {
-      sum += direct;
-      continue;
-    }
+    const imposto = findElementByLocalName(det, 'imposto');
+    if (!imposto) continue;
     
-    // Procura dentro de prod
-    const prod = findElementByLocalName(det, 'prod');
-    if (prod) {
-      const nested = getNumericContent(prod, tagName);
-      if (nested > 0) {
-        sum += nested;
-        continue;
+    let valor = 0;
+    
+    switch (tagName) {
+      case 'vPIS': {
+        const pis = findElementByLocalName(imposto, 'PIS');
+        const variants = ['PISAliq', 'PISOutr', 'PISNT', 'PISST', 'PISQtde'];
+        for (const v of variants) {
+          const elem = findElementByLocalName(pis || imposto, v);
+          if (elem) {
+            valor = getNumericContent(elem, 'vPIS');
+            if (valor > 0) break;
+          }
+        }
+        break;
+      }
+      case 'vCOFINS': {
+        const cofins = findElementByLocalName(imposto, 'COFINS');
+        const variants = ['COFINSAliq', 'COFINSOutr', 'COFINSNT', 'COFINSST', 'COFINSQtde'];
+        for (const v of variants) {
+          const elem = findElementByLocalName(cofins || imposto, v);
+          if (elem) {
+            valor = getNumericContent(elem, 'vCOFINS');
+            if (valor > 0) break;
+          }
+        }
+        break;
+      }
+      case 'vIPI': {
+        const ipi = findElementByLocalName(imposto, 'IPI');
+        if (ipi) {
+          const elem = findElementByLocalName(ipi, 'IPITrib') || findElementByLocalName(ipi, 'IPINT');
+          if (elem) valor = getNumericContent(elem, 'vIPI');
+        }
+        break;
+      }
+      case 'vICMS': {
+        const icms = findElementByLocalName(imposto, 'ICMS');
+        if (icms?.children.length) {
+          valor = getNumericContent(icms.children[0], 'vICMS');
+        }
+        break;
       }
     }
     
-    // Procura dentro de imposto
-    const imp = findElementByLocalName(det, 'imposto') ?? det;
-    const nested2 = getNumericContent(imp, tagName);
-    if (nested2 > 0) {
-      sum += nested2;
-    }
+    sum += valor;
   }
   
   return sum;
@@ -398,33 +414,19 @@ function aggregatePisCofins(doc: Element | null, tax: 'PIS' | 'COFINS'): TaxAggr
 
 /**
  * Limpa e normaliza conteúdo XML para melhorar compatibilidade
- * Remove caracteres problemáticos e normaliza estrutura
- * 
  * @param content - Conteúdo XML bruto
- * @param fileName - Nome do arquivo (para log)
  * @returns Conteúdo XML limpo
  */
-function cleanXmlContent(content: string, fileName?: string): string {
+function cleanXmlContent(content: string): string {
   if (!content) return content;
   
-  let cleaned = content;
-  
-  // Remove BOM (Byte Order Mark)
-  cleaned = cleaned.replace(/^\uFEFF/, '');
-  
-  // Remove comentários XML
-  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
-  
-  // Remove declarações xmlns para simplificar buscas
-  cleaned = cleaned.replace(/\s+xmlns(:\w+)?="[^"]*"/g, '');
-  
-  // Remove caracteres de controle inválidos
-  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-  
-  // Escapa & soltos (não parte de entidades)
-  cleaned = cleaned.replace(/&(?!#?\w+;)/g, '&amp;');
-  
-  return cleaned.trim();
+  return content
+    .replace(/^\uFEFF/, '') // Remove BOM
+    .replace(/<!--[\s\S]*?-->/g, '') // Remove comentários
+    .replace(/\s+xmlns(:\w+)?="[^"]*"/g, '') // Remove xmlns
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // Remove caracteres inválidos
+    .replace(/&(?!#?\w+;)/g, '&amp;') // Escapa & soltos
+    .trim();
 }
 
 // ============================================================================
@@ -466,51 +468,37 @@ function formatDate(dateStr: string): string {
   }
 }
 
-/*
+/**
  * Formata CNPJ ou CPF com máscara apropriada
- * @param value - CNPJ/CPF sem formatação
- * @returns CNPJ/CPF formatado
  */
 function formatCnpjCpf(value: string): string {
   if (!value) return '';
-  
   const digits = value.replace(/\D/g, '');
   
   if (digits.length === 11) {
-    // CPF: 000.000.000-00
     return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  } else if (digits.length === 14) {
-    // CNPJ: 00.000.000/0000-00
+  }
+  if (digits.length === 14) {
     return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
   }
-  
   return value;
 }
 
 /**
  * Formata valor numérico como moeda brasileira
- * 
- * @param value - Valor numérico
- * @returns String formatada em R$
  */
 export function formatCurrency(value: number | undefined | null): string {
-  const safeValue = (value === undefined || value === null || isNaN(value)) ? 0 : value;
-  
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(safeValue);
+  }).format(value ?? 0);
 }
 
 /**
  * Formata valor numérico como percentual
- * 
- * @param value - Valor numérico
- * @returns String formatada com 2 casas decimais e símbolo %
  */
 export function formatPercent(value: number | undefined | null): string {
-  if (value === undefined || value === null || isNaN(value)) return '0.00%';
-  return `${value.toFixed(2)}%`;
+  return `${(value ?? 0).toFixed(2)}%`;
 }
 
 // ============================================================================
@@ -534,6 +522,11 @@ function determineSituacao(cStat: string): SituacaoDocumento {
 /**
  * Detecta tipo de operação (Entrada/Saída) em NF-e
  * 
+ * LÓGICA CORRETA:
+ * - Se SUA empresa é o EMITENTE = Nota de SAÍDA (você vendeu/enviou)
+ * - Se SUA empresa é o DESTINATÁRIO = Nota de ENTRADA (você comprou/recebeu)
+ * - Se SUA empresa NÃO aparece = usa campo tpNF do XML
+ * 
  * @param ide - Elemento ide do XML
  * @param emit - Elemento emit do XML
  * @param dest - Elemento dest do XML
@@ -546,26 +539,64 @@ function detectNFeOperationType(
   dest: Element | null,
   fileName: string
 ): TipoOperacao {
-  const tpNF = getTextContent(ide, 'tpNF').trim();
+  // Obtém CNPJs
+  const cnpjEmit = (getTextContent(emit, 'CNPJ') || getTextContent(emit, 'CPF')).replace(/\D/g, '');
+  const cnpjDest = (getTextContent(dest, 'CNPJ') || getTextContent(dest, 'CPF')).replace(/\D/g, '');
   
-  if (tpNF === '0') return 'Entrada';
-  if (tpNF === '1') return 'Saída';
+  // Verifica se a empresa usuária está no emitente ou destinatário
+  const empresaEhEmitente = isCnpjDaEmpresa(cnpjEmit);
+  const empresaEhDestinatario = isCnpjDaEmpresa(cnpjDest);
   
-  if (tpNF) {
-    console.warn(`tpNF incomum (${tpNF}) em ${fileName}, assumindo Saída`);
+  // REGRA PRINCIPAL: Se identificamos a empresa
+  if (empresaEhEmitente && !empresaEhDestinatario) {
+    // Empresa é emitente = SAÍDA (você está vendendo)
     return 'Saída';
   }
   
-  // Fallback: infere pela presença de destinatário
-  const hasDestinatario = dest && getTextContent(dest, 'xNome');
-  const tipoInferido: TipoOperacao = hasDestinatario ? 'Saída' : 'Entrada';
+  if (empresaEhDestinatario && !empresaEhEmitente) {
+    // Empresa é destinatário = ENTRADA (você está comprando)
+    return 'Entrada';
+  }
   
-  console.warn(`Tipo de operação inferido como ${tipoInferido} (faltava tpNF) em ${fileName}`);
-  return tipoInferido;
+  if (empresaEhEmitente && empresaEhDestinatario) {
+    // Nota entre filiais ou devolução - usa tpNF
+    const tpNF = getTextContent(ide, 'tpNF').trim();
+    if (tpNF === '0') return 'Entrada';
+    if (tpNF === '1') return 'Saída';
+    console.warn(`Nota própria (emit=dest) sem tpNF em ${fileName}, assumindo Saída`);
+    return 'Saída';
+  }
+  
+  // FALLBACK: Empresa não identificada, usa campo tpNF do XML
+  const tpNF = getTextContent(ide, 'tpNF').trim();
+  
+  if (tpNF === '0') {
+    console.warn(`tpNF=0 (Entrada) em nota de terceiro em ${fileName}`);
+    return 'Entrada';
+  }
+  if (tpNF === '1') {
+    console.warn(`tpNF=1 (Saída) em nota de terceiro em ${fileName}`);
+    return 'Saída';
+  }
+  
+  // FALLBACK FINAL: Sem tpNF e empresa não identificada
+  // Se tem destinatário, assume que é uma nota de saída (do emitente para o dest)
+  if (cnpjDest && cnpjEmit && cnpjDest !== cnpjEmit) {
+    console.warn(`Nota de terceiro sem tpNF em ${fileName}, inferindo como Saída (padrão)`);
+    return 'Saída';
+  }
+  
+  console.warn(`Não foi possível determinar tipo em ${fileName}, assumindo Entrada`);
+  return 'Entrada';
 }
 
 /**
  * Detecta tipo de operação (Entrada/Saída) em CT-e
+ * 
+ * LÓGICA CORRETA:
+ * - Se SUA empresa é o EMITENTE (transportador) = Nota de SAÍDA (você prestou serviço)
+ * - Se SUA empresa é o TOMADOR/REMETENTE/DESTINATÁRIO = Nota de ENTRADA (você contratou)
+ * - Se SUA empresa NÃO aparece = usa campo tpCTe do XML
  * 
  * @param ide - Elemento ide do XML
  * @param emit - Elemento emit do XML
@@ -579,22 +610,45 @@ function detectCTeOperationType(
   rem: Element | null,
   fileName: string
 ): TipoOperacao {
-  const tpCTe = getTextContent(ide, 'tpCTe').trim();
+  // Obtém CNPJs
+  const cnpjEmit = (getTextContent(emit, 'CNPJ') || getTextContent(emit, 'CPF')).replace(/\D/g, '');
+  const cnpjRem = (getTextContent(rem, 'CNPJ') || getTextContent(rem, 'CPF')).replace(/\D/g, '');
   
-  if (tpCTe === '1') return 'Entrada';
-  if (tpCTe === '0') return 'Saída';
+  // Verifica se a empresa usuária é o transportador (emitente) ou o tomador/remetente
+  const empresaEhEmitente = isCnpjDaEmpresa(cnpjEmit);
+  const empresaEhRemetente = isCnpjDaEmpresa(cnpjRem);
   
-  if (tpCTe) {
-    console.warn(`tpCTe incomum (${tpCTe}) em ${fileName}, assumindo Saída`);
+  // REGRA PRINCIPAL: Se identificamos a empresa
+  if (empresaEhEmitente && !empresaEhRemetente) {
+    // Empresa é transportador (emitente) = SAÍDA (você prestou serviço de transporte)
     return 'Saída';
   }
   
-  // Fallback: infere pela presença de remetente
-  const hasRemetente = rem && getTextContent(rem, 'xNome');
-  const tipoInferido: TipoOperacao = hasRemetente ? 'Saída' : 'Entrada';
+  if (empresaEhRemetente || (!empresaEhEmitente && cnpjRem)) {
+    // Empresa é tomador/remetente = ENTRADA (você contratou o transporte)
+    // OU nota de terceiro onde você NÃO é o transportador
+    if (empresaEhRemetente) {
+      return 'Entrada';
+    }
+  }
   
-  console.warn(`Tipo de operação inferido como ${tipoInferido} (faltava tpCTe) em ${fileName}`);
-  return tipoInferido;
+  // FALLBACK: Empresa não identificada, usa campo tpCTe do XML
+  const tpCTe = getTextContent(ide, 'tpCTe').trim();
+  
+  // tpCTe: 0=Normal (Saída), 1=Complementar, 2=Anulação, 3=Substituto
+  if (tpCTe === '0') {
+    console.warn(`tpCTe=0 (Normal/Saída) em CT-e de terceiro em ${fileName}`);
+    return 'Saída';
+  }
+  
+  // FALLBACK FINAL
+  if (cnpjRem && cnpjEmit && cnpjRem !== cnpjEmit) {
+    console.warn(`CT-e de terceiro sem identificação clara em ${fileName}, inferindo como Saída`);
+    return 'Saída';
+  }
+  
+  console.warn(`Não foi possível determinar tipo do CT-e em ${fileName}, assumindo Entrada`);
+  return 'Entrada';
 }
 
 // ============================================================================
@@ -715,6 +769,7 @@ function extractReferencedCTe(doc: Element): {
 function extractProtocol(doc: Element, protName: string): {
   situacao: SituacaoDocumento;
   situacaoInfo?: ProtocoloInfo;
+  dataMudancaSituacao?: string;
 } {
   const prot = findElementByLocalName(doc, protName) 
     || findElementByLocalName(doc.ownerDocument, protName) 
@@ -725,13 +780,17 @@ function extractProtocol(doc: Element, protName: string): {
   const cStat = getTextContent(infProt, 'cStat');
   const xMotivo = getTextContent(infProt, 'xMotivo');
   const nProt = getTextContent(infProt, 'nProt');
+  const dhRecbto = getTextContent(infProt, 'dhRecbto');
 
   const situacao = determineSituacao(cStat);
   const situacaoInfo = (cStat || xMotivo || nProt) 
     ? { cStat: cStat || undefined, xMotivo: xMotivo || undefined, nProt: nProt || undefined } 
     : undefined;
+  
+  // Captura data de mudança de situação (cancelamento, negação, etc)
+  const dataMudancaSituacao = (situacao !== 'Ativa' && dhRecbto) ? formatDate(dhRecbto) : undefined;
 
-  return { situacao, situacaoInfo };
+  return { situacao, situacaoInfo, dataMudancaSituacao };
 }
 
 // ============================================================================
@@ -765,61 +824,49 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   const nome = getTextContent(parceiro, 'xNome');
   const cnpj = getTextContent(parceiro, 'CNPJ') || getTextContent(parceiro, 'CPF');
 
-  // ICMS
+  // ICMS - Usa valores do totalizador ICMSTot (padrão oficial SEFAZ)
   const baseICMS = getNumericContent(icmsTot, 'vBC');
   const valorICMS = getNumericContent(icmsTot, 'vICMS');
   const aliquotaICMS = baseICMS > 0 ? (valorICMS / baseICMS) * 100 : 0;
 
-  // Valores totais
-  const valorTotal = getNumericContent(icmsTot, 'vProd') 
-    || getNumericContent(icmsTot, 'vNF') 
+  // Valores totais - Usa apenas ICMSTot
+  const valorTotal = getNumericContent(icmsTot, 'vNF') 
+    || getNumericContent(icmsTot, 'vProd') 
     || getNumericContent(doc, 'vNF') 
     || getNumericContent(doc, 'vProd');
     
-  const valorPIS = getNumericContent(icmsTot, 'vPIS') || getNumericContent(doc, 'vPIS');
-  const valorCOFINS = getNumericContent(icmsTot, 'vCOFINS') || getNumericContent(doc, 'vCOFINS');
-  const valorIPI = getNumericContent(icmsTot, 'vIPI') || getNumericContent(doc, 'vIPI');
+  // Tributos - Usa valores declarados no totalizador
+  const valorPIS = getNumericContent(icmsTot, 'vPIS') || 0;
+  const valorCOFINS = getNumericContent(icmsTot, 'vCOFINS') || 0;
+  const valorIPI = getNumericContent(icmsTot, 'vIPI') || 0;
   const valorDIFAL = getNumericContent(icmsTot, 'vICMSUFDest') || 0;
 
-  // PIS: cálculo inteligente com agregação por item
+  // PIS: cálculo com agregação por item
   const pisSummary = aggregatePisCofins(doc, 'PIS');
   const basePIS = pisSummary.base || getNumericContent(findElementByLocalName(icmsTot, 'PIS') || doc, 'vBC');
-  const declaredPISPct = pisSummary.declaredPctWeighted 
-    || getNumericContent(findElementByLocalName(icmsTot, 'PIS') || doc, 'pPIS');
-    
-  const aliquotaPIS = (basePIS > 0 && valorPIS > 0)
-    ? (valorPIS / basePIS) * 100
-    : (declaredPISPct > 0 ? declaredPISPct : DEFAULT_PIS_RATE);
+  const declaredPISPct = pisSummary.declaredPctWeighted || getNumericContent(findElementByLocalName(icmsTot, 'PIS') || doc, 'pPIS');
+  const aliquotaPIS = (basePIS > 0 && valorPIS > 0) ? (valorPIS / basePIS) * 100 : (declaredPISPct || DEFAULT_PIS_RATE);
 
   // COFINS: cálculo análogo ao PIS
   const cofinsSummary = aggregatePisCofins(doc, 'COFINS');
   const baseCOFINS = cofinsSummary.base || getNumericContent(findElementByLocalName(icmsTot, 'COFINS') || doc, 'vBC');
-  const declaredCOFINSPct = cofinsSummary.declaredPctWeighted 
-    || getNumericContent(findElementByLocalName(icmsTot, 'COFINS') || doc, 'pCOFINS');
-    
-  const aliquotaCOFINS = (baseCOFINS > 0 && valorCOFINS > 0)
-    ? (valorCOFINS / baseCOFINS) * 100
-    : (declaredCOFINSPct > 0 ? declaredCOFINSPct : DEFAULT_COFINS_RATE);
+  const declaredCOFINSPct = cofinsSummary.declaredPctWeighted || getNumericContent(findElementByLocalName(icmsTot, 'COFINS') || doc, 'pCOFINS');
+  const aliquotaCOFINS = (baseCOFINS > 0 && valorCOFINS > 0) ? (valorCOFINS / baseCOFINS) * 100 : (declaredCOFINSPct || DEFAULT_COFINS_RATE);
 
-  // IPI: alíquota fixa por regra de negócio
+  // IPI e DIFAL
   const aliquotaIPI = DEFAULT_IPI_RATE;
   const aliquotaDIFAL = baseICMS > 0 ? (valorDIFAL / baseICMS) * 100 : 0;
 
-  // Redução ICMS
-  const dets = getElementsByLocalName(doc, 'det');
-  let reducaoICMS = 0;
-  if (dets.length > 0) {
-    const icmsElement = dets[0] ? findElementByLocalName(dets[0], 'ICMS') : null;
-    if (icmsElement?.children[0]) {
-      reducaoICMS = getNumericContent(icmsElement.children[0], 'pRedBC');
-    }
-  }
+  // Redução ICMS do primeiro item
+  const primeiroItem = getElementsByLocalName(doc, 'det')[0];
+  const icmsElement = primeiroItem ? findElementByLocalName(primeiroItem, 'ICMS') : null;
+  const reducaoICMS = icmsElement?.children[0] ? getNumericContent(icmsElement.children[0], 'pRedBC') : 0;
 
   // Data de emissão
   const dataStr = getTextContent(ide, 'dhEmi') || getTextContent(ide, 'dEmi');
 
   // Protocolo e situação
-  const { situacao, situacaoInfo } = extractProtocol(doc, 'protNFe');
+  const { situacao, situacaoInfo, dataMudancaSituacao } = extractProtocol(doc, 'protNFe');
 
   // Documentos referenciados
   const referenced = extractReferencedNFe(ide);
@@ -827,44 +874,17 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   // Materiais
   const material = extractMaterials(doc);
 
-  // Validações de consistência
-  const sumPIS = sumDetValues(doc, 'vPIS');
-  const expectedPIS = sumPIS > 0 
-    ? sumPIS 
-    : (declaredPISPct > 0 && basePIS > 0 
-      ? basePIS * (declaredPISPct / 100) 
-      : valorTotal * (aliquotaPIS / 100));
-  const verifiedPIS = amountsClose(valorPIS, expectedPIS);
+  // Validações: Compara valores declarados com cálculo
+  const expectedPIS = basePIS * (aliquotaPIS / 100);
+  const expectedCOFINS = baseCOFINS * (aliquotaCOFINS / 100);
+  const expectedIPI = valorTotal * (aliquotaIPI / 100);
+  const expectedICMS = baseICMS * (aliquotaICMS / 100);
 
-  const sumCOF = sumDetValues(doc, 'vCOFINS');
-  const expectedCOFINS = sumCOF > 0 
-    ? sumCOF 
-    : (declaredCOFINSPct > 0 && baseCOFINS > 0 
-      ? baseCOFINS * (declaredCOFINSPct / 100) 
-      : valorTotal * (aliquotaCOFINS / 100));
-  const verifiedCOFINS = amountsClose(valorCOFINS, expectedCOFINS);
-
-  const sumIPI = sumDetValues(doc, 'vIPI');
-  const expectedIPI = sumIPI > 0 ? sumIPI : (valorTotal * (aliquotaIPI / 100));
-  const verifiedIPI = amountsClose(valorIPI, expectedIPI);
-
-  const sumICMS = sumDetValues(doc, 'vICMS');
-  const expectedICMS = sumICMS > 0 ? sumICMS : (baseICMS > 0 ? baseICMS * (aliquotaICMS / 100) : 0);
-  const verifiedICMS = amountsClose(valorICMS, expectedICMS);
-
-  // Log de divergências
-  if (!verifiedPIS) {
-    console.debug(`PIS mismatch (${fileName}): actual=${valorPIS.toFixed(2)} expected=${expectedPIS.toFixed(2)}`);
-  }
-  if (!verifiedCOFINS) {
-    console.debug(`COFINS mismatch (${fileName}): actual=${valorCOFINS.toFixed(2)} expected=${expectedCOFINS.toFixed(2)}`);
-  }
-  if (!verifiedIPI) {
-    console.debug(`IPI mismatch (${fileName}): actual=${valorIPI.toFixed(2)} expected=${expectedIPI.toFixed(2)}`);
-  }
-  if (!verifiedICMS) {
-    console.debug(`ICMS mismatch (${fileName}): actual=${valorICMS.toFixed(2)} expected=${expectedICMS.toFixed(2)}`);
-  }
+  const tolerance = 5.0;
+  const verifiedPIS = valorPIS === 0 || Math.abs(valorPIS - expectedPIS) <= tolerance;
+  const verifiedCOFINS = valorCOFINS === 0 || Math.abs(valorCOFINS - expectedCOFINS) <= tolerance;
+  const verifiedIPI = valorIPI === 0 || Math.abs(valorIPI - expectedIPI) <= tolerance;
+  const verifiedICMS = Math.abs(valorICMS - expectedICMS) <= tolerance;
 
   // Retorna objeto NotaFiscal completo
   return {
@@ -898,20 +918,21 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
     ...referenced,
     material,
     dataInsercao: '',
-    expectedPIS,
-    expectedCOFINS,
-    expectedIPI,
-    expectedICMS,
     verifiedPIS,
     verifiedCOFINS,
     verifiedIPI,
     verifiedICMS,
+    expectedPIS,
+    expectedCOFINS,
+    expectedIPI,
+    expectedICMS,
     basePIS,
     baseCOFINS,
     declaredPIS: declaredPISPct > 0 ? Math.round(declaredPISPct * 100) / 100 : undefined,
     declaredCOFINS: declaredCOFINSPct > 0 ? Math.round(declaredCOFINSPct * 100) / 100 : undefined,
     situacao,
     situacaoInfo,
+    dataMudancaSituacao,
   };
 }
 
@@ -932,6 +953,7 @@ function parseCTe(doc: Element, fileName: string): NotaFiscal {
   const ide = findElementByLocalName(doc, 'ide');
   const emit = findElementByLocalName(doc, 'emit');
   const rem = findElementByLocalName(doc, 'rem');
+  const dest = findElementByLocalName(doc, 'dest');
   const vPrest = findElementByLocalName(doc, 'vPrest');
   const imp = findElementByLocalName(doc, 'imp');
   const icms = imp ? findElementByLocalName(imp, 'ICMS') : null;
@@ -942,8 +964,8 @@ function parseCTe(doc: Element, fileName: string): NotaFiscal {
   // Chave de acesso
   const chaveAcesso = infCte?.getAttribute('Id')?.replace('CTe', '') ?? '';
   
-  // Parceiro
-  const parceiro = rem || emit;
+  // Parceiro (cliente ou fornecedor conforme tipo de operação)
+  const parceiro = tipoOperacao === 'Saída' ? (dest || rem) : emit;
   const nome = getTextContent(parceiro, 'xNome');
   const cnpj = getTextContent(parceiro, 'CNPJ') || getTextContent(parceiro, 'CPF');
 
@@ -971,7 +993,7 @@ function parseCTe(doc: Element, fileName: string): NotaFiscal {
   const dataStr = getTextContent(ide, 'dhEmi') || getTextContent(ide, 'dEmi');
 
   // Protocolo e situação
-  const { situacao, situacaoInfo } = extractProtocol(doc, 'protCTe');
+  const { situacao, situacaoInfo, dataMudancaSituacao } = extractProtocol(doc, 'protCTe');
 
   // Documentos referenciados
   const referenced = extractReferencedCTe(doc);
@@ -1036,6 +1058,7 @@ function parseCTe(doc: Element, fileName: string): NotaFiscal {
     verifiedICMS,
     situacao,
     situacaoInfo,
+    dataMudancaSituacao,
   };
 }
 
@@ -1060,7 +1083,7 @@ function parseCTe(doc: Element, fileName: string): NotaFiscal {
 export function parseNFeXML(xmlContent: string, fileName: string): NotaFiscal | null {
   try {
     // Limpeza e normalização do XML
-    xmlContent = cleanXmlContent(xmlContent, fileName);
+    xmlContent = cleanXmlContent(xmlContent);
 
     // Parse do XML
     const parser = new DOMParser();

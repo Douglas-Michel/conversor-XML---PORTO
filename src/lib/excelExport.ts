@@ -30,30 +30,29 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
   // Main sheet: keep same columns/order as the UI table for visual parity
   const data = normalizedNotas.map((nota) => ({
     'DATA EMISSÃO': nota.dataEmissao || today,
-    'DATA INSERÇÃO': nota.dataInsercao || today,
     'SITUAÇÃO': (nota.situacao || 'Desconhecida').toUpperCase(),
-    'DATA MUDANÇA': nota.dataMudancaSituacao || '',
-    'TIPO NF': nota.tipoOperacao?.toUpperCase() || '',
     'FORNECEDOR/CLIENTE': nota.fornecedorCliente?.toUpperCase() || '',
-    'MATERIAL': nota.material?.toUpperCase() || '',
     'Nº NF-E': nota.tipo === 'NF-e' ? nota.numero : '',
-    'Nº CT-E': nota.numeroCTe || nota.nfeReferenciada || '',
+    'MATERIAL': nota.material?.toUpperCase() || '',
     'VALOR': nota.valorTotal,
     'ALÍQ. PIS': nota.aliquotaPIS !== undefined ? `  ${nota.aliquotaPIS.toFixed(2)}%  ` : '',
     'PIS': nota.valorPIS,
-    'P': nota.verifiedPIS ? 'V' : 'X',
+    'P': '',
     'ALÍQ. COF': nota.aliquotaCOFINS !== undefined ? `  ${nota.aliquotaCOFINS.toFixed(2)}%  ` : '',
     'COFINS': nota.valorCOFINS,
-    'C': nota.verifiedCOFINS ? 'V' : 'X',
+    'C': '',
     'ALÍQ. IPI': nota.aliquotaIPI !== undefined ? `  ${nota.aliquotaIPI.toFixed(2)}%  ` : '',
     'IPI': nota.valorIPI,
-    'I': nota.verifiedIPI ? 'V' : 'X',
+    'I': '',
     'ALÍQ. ICMS': nota.aliquotaICMS !== undefined ? `  ${nota.aliquotaICMS.toFixed(2)}%  ` : '',
     'ICMS': nota.valorICMS,
-    'IC': nota.verifiedICMS ? 'V' : 'X',
+    'IC': '',
     'ALÍQ. DIFAL': nota.aliquotaDIFAL !== undefined ? `  ${nota.aliquotaDIFAL.toFixed(2)}%  ` : '',
     'DIFAL': nota.valorDIFAL,
     'REDUZ ICMS': '',
+    'DATA INSERÇÃO': nota.dataInsercao || today,
+    'DATA MUDANÇA': nota.dataMudancaSituacao || '',
+    'TIPO NF': nota.tipoOperacao?.toUpperCase() || '',
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
@@ -107,14 +106,10 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
 
   const columnWidths = [
     { wch: 12 },  // Data Emissão
-    { wch: 12 },  // Data Inserção
     { wch: 14 },  // Situação
-    { wch: 12 },  // Data Mudança
-    { wch: 10 },  // Tipo NF (Entrada/Saída)
     { wch: 40 },  // Fornecedor/Cliente
-    { wch: 40 },  // Material
     { wch: 12 },  // Nº NF-e
-    { wch: 12 },  // Nº CT-e
+    { wch: 40 },  // Material
     { wch: 15 },  // Valor
     { wch: 10 },  // Alíq. PIS
     { wch: 12 },  // PIS
@@ -131,6 +126,9 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     { wch: 10 },  // Alíq. DIFAL
     { wch: 12 },  // DIFAL
     { wch: 10 },  // Reduz ICMS
+    { wch: 12 },  // Data Inserção
+    { wch: 12 },  // Data Mudança
+    { wch: 10 },  // Tipo NF
   ];
   worksheet['!cols'] = columnWidths;
 

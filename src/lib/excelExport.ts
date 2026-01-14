@@ -35,21 +35,23 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     'Nº NF-E': nota.tipo === 'NF-e' ? nota.numero : '',
     'MATERIAL': nota.material?.toUpperCase() || '',
     'VALOR': nota.valorTotal,
-    'ALÍQ. PIS': nota.aliquotaPIS !== undefined ? `  ${nota.aliquotaPIS.toFixed(2)}%  ` : '',
+    'ALÍQ. PIS': nota.aliquotaPIS !== undefined ? nota.aliquotaPIS / 100 : null,
     'PIS': nota.valorPIS,
     'P': '',
-    'ALÍQ. COF': nota.aliquotaCOFINS !== undefined ? `  ${nota.aliquotaCOFINS.toFixed(2)}%  ` : '',
+    'ALÍQ. COF': nota.aliquotaCOFINS !== undefined ? nota.aliquotaCOFINS / 100 : null,
     'COFINS': nota.valorCOFINS,
     'C': '',
-    'ALÍQ. IPI': nota.aliquotaIPI !== undefined ? `  ${nota.aliquotaIPI.toFixed(2)}%  ` : '',
+    'ALÍQ. IPI': nota.aliquotaIPI !== undefined ? nota.aliquotaIPI / 100 : null,
     'IPI': nota.valorIPI,
     'I': '',
-    'ALÍQ. ICMS': nota.aliquotaICMS !== undefined ? `  ${nota.aliquotaICMS.toFixed(2)}%  ` : '',
+    'ALÍQ. ICMS': nota.aliquotaICMS !== undefined ? nota.aliquotaICMS / 100 : null,
     'ICMS': nota.valorICMS,
     'IC': '',
-    'ALÍQ. DIFAL': nota.aliquotaDIFAL !== undefined ? `  ${nota.aliquotaDIFAL.toFixed(2)}%  ` : '',
+    'ALÍQ. DIFAL': nota.aliquotaDIFAL !== undefined ? nota.aliquotaDIFAL / 100 : null,
     'DIFAL': nota.valorDIFAL,
+    'ANO': nota.dataEmissao ? new Date(nota.dataEmissao.split('/').reverse().join('-')).getFullYear() : '',
     'REDUZ ICMS': '',
+    'MÊS': nota.dataEmissao ? new Date(nota.dataEmissao.split('/').reverse().join('-')).getMonth() + 1 : '',
     'DATA INSERÇÃO': nota.dataInsercao || today,
     'SITUAÇÃO': (nota.situacao || 'Desconhecida').toUpperCase(),
     'DATA MUDANÇA': nota.dataMudancaSituacao || '',
@@ -95,7 +97,8 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
         for (let r = range.s.r + 1; r <= range.e.r; r++) {
           const addr = XLSX.utils.encode_cell({ c, r });
           const cell = worksheet[addr];
-          if (cell) {
+          if (cell && typeof cell.v === 'number') {
+            cell.z = '0.00%';
             if (!cell.s) cell.s = {};
             cell.s.alignment = { horizontal: 'center', vertical: 'center' };
           }
@@ -125,7 +128,9 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     { wch: 4 },   // IC
     { wch: 10 },  // Alíq. DIFAL
     { wch: 12 },  // DIFAL
+    { wch: 8 },   // ANO
     { wch: 10 },  // Reduz ICMS
+    { wch: 6 },   // MÊS
     { wch: 12 },  // Data Inserção
     { wch: 14 },  // Situação
     { wch: 12 },  // Data Mudança

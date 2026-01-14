@@ -53,7 +53,9 @@ export function DataTable({ data }: DataTableProps) {
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">IC</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">Alíq. DIFAL</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">DIFAL</TableHead>
+                <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">ANO</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">Reduz ICMS</TableHead>
+                <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">MÊS</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Data Inserção</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Situação</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Data Mudança</TableHead>
@@ -183,8 +185,14 @@ export function DataTable({ data }: DataTableProps) {
                   <TableCell className="text-right tabular-nums text-muted-foreground whitespace-nowrap">
                     {formatCurrency(nota.valorDIFAL)}
                   </TableCell>
+                  <TableCell className="text-center text-sm text-muted-foreground">
+                    {nota.dataEmissao ? nota.dataEmissao.split('/')[2] : '-'}
+                  </TableCell>
                   <TableCell className="text-center">
                     {nota.reducaoICMS > 0 ? 'Sim' : 'Não'}
+                  </TableCell>
+                  <TableCell className="text-center text-sm text-muted-foreground">
+                    {nota.dataEmissao ? nota.dataEmissao.split('/')[1] : '-'}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground text-center whitespace-nowrap">
                     {nota.dataInsercao || ''}

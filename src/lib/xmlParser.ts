@@ -753,11 +753,10 @@ function extractMaterials(doc: Element): string {
   const unique = Array.from(new Set(materiais)).filter(Boolean);
   
   if (unique.length === 0) return '';
-  if (unique.length <= MAX_MATERIALS_DISPLAY) {
-    return unique.join('; ');
-  }
   
-  return `${unique.slice(0, MAX_MATERIALS_DISPLAY).join('; ')}...`;
+  // Retorna apenas o primeiro produto limitado a 30 caracteres
+  const firstProduct = unique[0];
+  return firstProduct.length > 30 ? firstProduct.substring(0, 30) + '...' : firstProduct;
 }
 
 // ============================================================================

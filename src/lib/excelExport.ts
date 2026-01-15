@@ -37,16 +37,12 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     'VALOR': nota.valorTotal,
     'ALÍQ. PIS': nota.aliquotaPIS !== undefined ? nota.aliquotaPIS / 100 : null,
     'PIS': nota.valorPIS,
-    'P': '',
     'ALÍQ. COF': nota.aliquotaCOFINS !== undefined ? nota.aliquotaCOFINS / 100 : null,
     'COFINS': nota.valorCOFINS,
-    'C': '',
     'ALÍQ. IPI': nota.aliquotaIPI !== undefined ? nota.aliquotaIPI / 100 : null,
     'IPI': nota.valorIPI,
-    'I': '',
     'ALÍQ. ICMS': nota.aliquotaICMS !== undefined ? nota.aliquotaICMS / 100 : null,
     'ICMS': nota.valorICMS,
-    'IC': '',
     'ALÍQ. DIFAL': nota.aliquotaDIFAL !== undefined ? nota.aliquotaDIFAL / 100 : null,
     'DIFAL': nota.valorDIFAL,
     'ANO': nota.dataEmissao ? new Date(nota.dataEmissao.split('/').reverse().join('-')).getFullYear() : '',
@@ -139,16 +135,12 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     { wch: 15 },  // Valor
     { wch: 10 },  // Alíq. PIS
     { wch: 12 },  // PIS
-    { wch: 4 },   // P
     { wch: 10 },  // Alíq. COF
     { wch: 12 },  // COFINS
-    { wch: 4 },   // C
     { wch: 10 },  // Alíq. IPI
     { wch: 12 },  // IPI
-    { wch: 4 },   // I
     { wch: 10 },  // Alíq. ICMS
     { wch: 12 },  // ICMS
-    { wch: 4 },   // IC
     { wch: 10 },  // Alíq. DIFAL
     { wch: 12 },  // DIFAL
     { wch: 8 },   // ANO

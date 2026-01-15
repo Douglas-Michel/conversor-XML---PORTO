@@ -172,7 +172,7 @@ const SEFAZ_STATUS = {
 /**
  * Limites para exibição de materiais
  */
-const MAX_MATERIALS_DISPLAY = 3;
+const MAX_MATERIALS_DISPLAY = 1;
 
 /**
  * CNPJs/CPFs da empresa usuária (para detecção de entrada/saída)

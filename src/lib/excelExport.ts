@@ -65,6 +65,8 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     const range = XLSX.utils.decode_range(ref);
     const currencyHeaders = ['VALOR', 'PIS', 'COFINS', 'IPI', 'ICMS', 'DIFAL', 'PIS ESPERADO', 'COFINS ESPERADO'];
     const percentHeaders = ['ALÍQ. PIS', 'ALÍQ. COF', 'ALÍQ. IPI', 'ALÍQ. ICMS', 'ALÍQ. DIFAL'];
+    const numberHeaders = ['Nº NF-E', 'ANO', 'MÊS'];
+    const dateHeaders = ['DATA EMISSÃO', 'DATA INSERÇÃO', 'DATA MUDANÇA'];
     
     // Centralizar cabeçalhos
     for (let c = range.s.c; c <= range.e.c; c++) {
@@ -76,7 +78,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
       }
     }
     
-    // Formatar valores monetários e centralizar alíquotas
+    // Formatar valores monetários, alíquotas, números e datas
     for (let c = range.s.c; c <= range.e.c; c++) {
       const headerAddr = XLSX.utils.encode_cell({ c, r: range.s.r });
       const headerCell = worksheet[headerAddr];
@@ -88,7 +90,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
           const addr = XLSX.utils.encode_cell({ c, r });
           const cell = worksheet[addr];
           if (cell && typeof cell.v === 'number') {
-            cell.z = 'R$ #,##0.00';
+            cell.z = '[$R$-pt-BR] #,##0.00';
           }
         }
       }
@@ -101,6 +103,27 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
             cell.z = '0.00%';
             if (!cell.s) cell.s = {};
             cell.s.alignment = { horizontal: 'center', vertical: 'center' };
+          }
+        }
+      }
+      
+      if (numberHeaders.includes(header)) {
+        for (let r = range.s.r + 1; r <= range.e.r; r++) {
+          const addr = XLSX.utils.encode_cell({ c, r });
+          const cell = worksheet[addr];
+          if (cell && cell.v !== undefined && cell.v !== '') {
+            cell.t = 'n';
+            cell.z = '0';
+          }
+        }
+      }
+      
+      if (dateHeaders.includes(header)) {
+        for (let r = range.s.r + 1; r <= range.e.r; r++) {
+          const addr = XLSX.utils.encode_cell({ c, r });
+          const cell = worksheet[addr];
+          if (cell && cell.v) {
+            cell.z = 'DD/MM/YYYY';
           }
         }
       }
@@ -156,6 +179,21 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
         headerCell.s.alignment = { horizontal: 'center', vertical: 'center' };
       }
     }
+    
+    // Formatar coluna VALOR com formato contábil
+    for (let c = summaryRange.s.c; c <= summaryRange.e.c; c++) {
+      const headerAddr = XLSX.utils.encode_cell({ c, r: summaryRange.s.r });
+      const headerCell = summarySheet[headerAddr];
+      if (headerCell && String(headerCell.v) === 'VALOR') {
+        for (let r = summaryRange.s.r + 1; r <= summaryRange.e.r; r++) {
+          const addr = XLSX.utils.encode_cell({ c, r });
+          const cell = summarySheet[addr];
+          if (cell && typeof cell.v === 'number') {
+            cell.z = '[$R$-pt-BR] #,##0.00';
+          }
+        }
+      }
+    }
   }
   
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumo');
@@ -193,7 +231,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
           for (let r = rRange.s.r + 1; r <= rRange.e.r; r++) {
             const addr = XLSX.utils.encode_cell({ c, r });
             const cell = reconcSheet[addr];
-            if (cell && typeof cell.v === 'number') cell.z = 'R$ #,##0.00';
+            if (cell && typeof cell.v === 'number') cell.z = '[$R$-pt-BR] #,##0.00';
           }
         }
       }

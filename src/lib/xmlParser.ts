@@ -901,7 +901,7 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   // ICMS - Usa valores do totalizador ICMSTot (padrão oficial SEFAZ)
   const baseICMS = getNumericContent(icmsTot, 'vBC');
   const valorICMS = getNumericContent(icmsTot, 'vICMS');
-  const aliquotaICMS = baseICMS > 0 ? (valorICMS / baseICMS) * 100 : 0;
+  const aliquotaICMS = baseICMS > 0 ? Math.round((valorICMS / baseICMS) * 100 * 100) / 100 : 0;
 
   // Valores totais - Usa vBC (base de cálculo ICMS) que sempre tem o valor correto
   const valorTotal = baseICMS 
@@ -921,14 +921,14 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   const basePIS = pisSummary.base || getNumericContent(findElementByLocalName(icmsTot, 'PIS') || doc, 'vBC');
   const declaredPISPct = pisSummary.declaredPctWeighted || getNumericContent(findElementByLocalName(icmsTot, 'PIS') || doc, 'pPIS');
   // Alíquota calculada: (Valor PIS ÷ Base ICMS) × 100
-  const aliquotaPIS = (baseICMS > 0 && valorPIS > 0) ? (valorPIS / baseICMS) * 100 : (declaredPISPct > 0 ? declaredPISPct : 0);
+  const aliquotaPIS = (baseICMS > 0 && valorPIS > 0) ? Math.round((valorPIS / baseICMS) * 100 * 100) / 100 : (declaredPISPct > 0 ? Math.round(declaredPISPct * 100) / 100 : 0);
 
   // COFINS: cálculo análogo ao PIS
   const cofinsSummary = aggregatePisCofins(doc, 'COFINS');
   const baseCOFINS = cofinsSummary.base || getNumericContent(findElementByLocalName(icmsTot, 'COFINS') || doc, 'vBC');
   const declaredCOFINSPct = cofinsSummary.declaredPctWeighted || getNumericContent(findElementByLocalName(icmsTot, 'COFINS') || doc, 'pCOFINS');
   // Alíquota calculada: (Valor COFINS ÷ Base ICMS) × 100
-  const aliquotaCOFINS = (baseICMS > 0 && valorCOFINS > 0) ? (valorCOFINS / baseICMS) * 100 : (declaredCOFINSPct > 0 ? declaredCOFINSPct : 0);
+  const aliquotaCOFINS = (baseICMS > 0 && valorCOFINS > 0) ? Math.round((valorCOFINS / baseICMS) * 100 * 100) / 100 : (declaredCOFINSPct > 0 ? Math.round(declaredCOFINSPct * 100) / 100 : 0);
 
   // IPI: extração da alíquota real do XML
   const ipiSummary = aggregateIPI(doc);
@@ -936,13 +936,13 @@ function parseNFe(doc: Element, fileName: string): NotaFiscal {
   const declaredIPIPct = ipiSummary.declaredPctWeighted;
   // Usa alíquota declarada no XML, fallback para cálculo reverso, depois 0
   const aliquotaIPI = declaredIPIPct > 0 
-    ? declaredIPIPct 
+    ? Math.round(declaredIPIPct * 100) / 100 
     : (baseIPI > 0 && valorIPI > 0) 
-      ? (valorIPI / baseIPI) * 100 
+      ? Math.round((valorIPI / baseIPI) * 100 * 100) / 100 
       : 0;
 
   // DIFAL
-  const aliquotaDIFAL = baseICMS > 0 ? (valorDIFAL / baseICMS) * 100 : 0;
+  const aliquotaDIFAL = baseICMS > 0 ? Math.round((valorDIFAL / baseICMS) * 100 * 100) / 100 : 0;
 
   // Redução ICMS do primeiro item
   const primeiroItem = getElementsByLocalName(doc, 'det')[0];

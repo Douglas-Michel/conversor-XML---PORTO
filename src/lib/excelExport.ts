@@ -33,6 +33,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     'TIPO NF': nota.tipoOperacao?.toUpperCase() || '',
     'FORNECEDOR/CLIENTE': nota.fornecedorCliente?.toUpperCase() || '',
     'Nº NF-E': nota.tipo === 'NF-e' ? nota.numero : '',
+    'Nº CT-E': nota.numeroCTe || '',
     'MATERIAL': nota.material?.toUpperCase() || '',
     'VALOR': nota.valorTotal,
     'ALÍQ. PIS': nota.aliquotaPIS !== undefined ? nota.aliquotaPIS / 100 : null,
@@ -61,7 +62,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     const range = XLSX.utils.decode_range(ref);
     const currencyHeaders = ['VALOR', 'PIS', 'COFINS', 'IPI', 'ICMS', 'DIFAL', 'PIS ESPERADO', 'COFINS ESPERADO'];
     const percentHeaders = ['ALÍQ. PIS', 'ALÍQ. COF', 'ALÍQ. IPI', 'ALÍQ. ICMS', 'ALÍQ. DIFAL'];
-    const numberHeaders = ['Nº NF-E', 'ANO', 'MÊS'];
+    const numberHeaders = ['Nº NF-E', 'Nº CT-E', 'ANO', 'MÊS'];
     const dateHeaders = ['DATA EMISSÃO', 'DATA INSERÇÃO', 'DATA MUDANÇA'];
     
     // Centralizar cabeçalhos
@@ -131,6 +132,7 @@ export function exportToExcel(notas: NotaFiscal[], fileName: string = 'notas_fis
     { wch: 10 },  // Tipo NF
     { wch: 40 },  // Fornecedor/Cliente
     { wch: 12 },  // Nº NF-e
+    { wch: 12 },  // Nº CT-e
     { wch: 40 },  // Material
     { wch: 15 },  // Valor
     { wch: 10 },  // Alíq. PIS

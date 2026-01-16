@@ -29,7 +29,7 @@ export function DataTable({ data }: DataTableProps) {
       className="rounded-xl border border-border bg-card shadow-soft overflow-hidden"
     >
       <ScrollArea className="w-full">
-        <div className="min-w-[2200px]">
+        <div className="min-w-[2300px]">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -37,6 +37,7 @@ export function DataTable({ data }: DataTableProps) {
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Tipo NF</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap">Fornecedor/Cliente</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Nº NF-e</TableHead>
+                <TableHead className="font-semibold text-foreground whitespace-nowrap text-center">Nº CT-E</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap">Material</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">Valor</TableHead>
                 <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">Alíq. PIS</TableHead>
@@ -82,6 +83,9 @@ export function DataTable({ data }: DataTableProps) {
                   </TableCell>
                   <TableCell className="font-mono text-sm text-center">
                     {nota.tipo === 'NF-e' ? nota.numero : '-'}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm text-center">
+                    {nota.numeroCTe || '-'}
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate text-sm" title={nota.material}>
                     {nota.material}

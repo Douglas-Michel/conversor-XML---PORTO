@@ -731,10 +731,10 @@ function detectCTeOperationType(
 
 /**
  * Extrai descrição dos produtos/materiais dos itens do documento
- * Limita a exibição aos primeiros 3 itens
+ * Retorna todos os produtos concatenados separados por ponto-e-vírgula
  * 
  * @param doc - Documento XML
- * @returns String com materiais separados por ponto-e-vírgula
+ * @returns String com todos os materiais separados por ponto-e-vírgula
  */
 function extractMaterials(doc: Element): string {
   const detsList = getElementsByLocalName(doc, 'det');
@@ -754,9 +754,8 @@ function extractMaterials(doc: Element): string {
   
   if (unique.length === 0) return '';
   
-  // Retorna apenas o primeiro produto limitado a 30 caracteres
-  const firstProduct = unique[0];
-  return firstProduct.length > 30 ? firstProduct.substring(0, 30) + '...' : firstProduct;
+  // Retorna todos os produtos separados por ponto-e-vírgula
+  return unique.join('; ');
 }
 
 // ============================================================================
